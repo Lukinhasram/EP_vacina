@@ -7,4 +7,3 @@ pre-commit
 requests
 tqdm
 pathlib
-sys
