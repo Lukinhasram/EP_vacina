@@ -13,10 +13,15 @@ def ensure_csv():
     if CSV_PATH.exists():
         return
     # baixa e salva localmente
-    with requests.get(DATA_URL, stream=True) as r:
-        r.raise_for_status()
-        CSV_PATH.write_bytes(r.content)
-    print("✔  CSV baixado para", CSV_PATH)
+    try:
+        with requests.get(DATA_URL, stream=True) as r:
+            r.raise_for_status()
+            CSV_PATH.write_bytes(r.content)
+        print("✔  CSV baixado para", CSV_PATH)
+    except requests.exceptions.RequestException as e:
+        print(f"Erro ao baixar o arquivo: {e}")
+    except IOError as e:
+        print(f"Erro ao salvar o arquivo CSV: {e}")
 
 ensure_csv()        # << chama antes do pd.read_csv
 df = pd.read_csv(CSV_PATH)
