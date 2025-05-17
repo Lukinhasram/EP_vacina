@@ -6,7 +6,7 @@ from scipy.stats import t
 import streamlit as st
 import pathlib, requests
 
-DATA_URL = "https://meu-bucket.s3.amazonaws.com/immunization_master_data.csv"
+DATA_URL = "https://dados-vacinacao-infantil-ep.s3.us-east-2.amazonaws.com/immunization_master_data.csv"
 CSV_PATH = pathlib.Path("immunization_master_data.csv")
 
 def ensure_csv():
