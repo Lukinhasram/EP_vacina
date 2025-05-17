@@ -1,0 +1,1 @@
+pre-commit install --hook-type post-merge --hook-type post-checkout
