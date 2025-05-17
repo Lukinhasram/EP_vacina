@@ -5,29 +5,31 @@ import plotly.express as px
 from scipy.stats import t
 import streamlit as st
 import pathlib, requests
+import sys
 
 DATA_URL = "https://dados-vacinacao-infantil-ep.s3.us-east-2.amazonaws.com/immunization_master_data.csv"
 CSV_PATH = pathlib.Path("immunization_master_data.csv")
 
 def ensure_csv():
-    if CSV_PATH.exists():
-        return
-    # baixa e salva localmente
-    try:
-        with requests.get(DATA_URL, stream=True) as r:
-            r.raise_for_status()
-            CSV_PATH.write_bytes(r.content)
-        print("✔  CSV baixado para", CSV_PATH)
-    except requests.exceptions.RequestException as e:
-        print(f"Erro ao baixar o arquivo: {e}")
-    except IOError as e:
-        print(f"Erro ao salvar o arquivo CSV: {e}")
+    if CSV_PATH.exists() and CSV_PATH.stat().st_size > 0:
+        return  # já existe e não está vazio
+
+    print("Baixando dataset…")
+    r = requests.get(DATA_URL, stream=True, timeout=30)
+    if r.status_code != 200:
+        sys.exit(f"❌ Falha no download (status {r.status_code}). "
+                 "Verifique se a URL está pública ou pré-assinada válida.")
+    # grava em stream
+    with open(CSV_PATH, "wb") as f:
+        for chunk in r.iter_content(8192):
+            f.write(chunk)
+
+    if CSV_PATH.stat().st_size == 0:
+        sys.exit("❌ Arquivo baixado ficou vazio. Cheque a permissão do objeto S3.")
+    print("✔ CSV salvo:", CSV_PATH)
 
 ensure_csv()        # << chama antes do pd.read_csv
 df = pd.read_csv(CSV_PATH)
-
-# Carregamento dos Dados
-df = pd.read_csv("immunization_master_data.csv")
 
 # Pré-processamento dos Dados
 siglas_estados = ['AC','AL','AM','AP','BA','CE','DF','ES','GO','MA','MG','MS','MT',
