@@ -6,3 +6,4 @@ streamlit
 pre-commit
 requests
 tqdm
+pathlib
