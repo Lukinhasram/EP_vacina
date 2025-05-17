@@ -1,0 +1,8 @@
+pandas
+numpy
+plotly
+scipy
+streamlit
+pre-commit
+requests
+tqdm
