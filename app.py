@@ -4,6 +4,22 @@ import numpy as np
 import plotly.express as px
 from scipy.stats import t
 import streamlit as st
+import pathlib, requests
+
+DATA_URL = "https://meu-bucket.s3.amazonaws.com/immunization_master_data.csv"
+CSV_PATH = pathlib.Path("immunization_master_data.csv")
+
+def ensure_csv():
+    if CSV_PATH.exists():
+        return
+    # baixa e salva localmente
+    with requests.get(DATA_URL, stream=True) as r:
+        r.raise_for_status()
+        CSV_PATH.write_bytes(r.content)
+    print("✔  CSV baixado para", CSV_PATH)
+
+ensure_csv()        # << chama antes do pd.read_csv
+df = pd.read_csv(CSV_PATH)
 
 # Carregamento dos Dados
 df = pd.read_csv("immunization_master_data.csv")
