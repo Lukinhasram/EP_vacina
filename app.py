@@ -85,13 +85,13 @@ st.sidebar.caption(
 )
 
 
-# Cálculo do coeficiente de correlação e p-valor, usando os códigos dos scripts providos
+# Cálculo do coeficiente de correlação e p-valor
 
 # Verifica se há dados suficientes para calcular a correlação (mínimo de 3 pontos)
 if len(df_ano[variavel_idh]) >= 3 and len(df_ano['PC_COVERAGE']) >= 3:
 
+    # Correlação de Pearson, usando os códigos dos scripts providos
     if metodo_correl == "Pearson":
-        # Pearson: como era antes
         correlacao = np.corrcoef(df_ano[variavel_idh], df_ano['PC_COVERAGE'])[0, 1]
         n = len(df_ano)
         if correlacao**2 < 1:
@@ -99,8 +99,9 @@ if len(df_ano[variavel_idh]) >= 3 and len(df_ano['PC_COVERAGE']) >= 3:
             p_valor = 2 * (1 - t.cdf(abs(t_obs), df=n - 2))
         else:
             p_valor = 0.0
-
-    else:                              # Spearman
+            
+    # Correlação de Spearman
+    else:
         correlacao, p_valor = spearmanr(
             df_ano[variavel_idh],
             df_ano['PC_COVERAGE'],
