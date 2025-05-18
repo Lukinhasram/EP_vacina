@@ -2,7 +2,6 @@
 import io, pathlib, requests, pandas as pd
 import seaborn as sns, matplotlib.pyplot as plt, statsmodels.api as sm
 
-# ---------- Configurações iniciais ----------
 # Caminho do arquivo Parquet contendo os dados
 PARQUET_FILE = pathlib.Path("immunization-master-data.parquet")
 
@@ -15,7 +14,6 @@ TARGET_YEAR = 2016
 # Diretório de saída para salvar os gráficos gerados
 OUT_DIR = pathlib.Path(f"plots_normalidade_{TARGET_YEAR}")
 OUT_DIR.mkdir(exist_ok=True)  # Cria o diretório, se não existir
-# --------------------------------------------
 
 
 # Função para gerar e salvar um gráfico QQ-plot
