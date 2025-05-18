@@ -5,31 +5,10 @@ import plotly.express as px
 from scipy.stats import t
 import streamlit as st
 import pathlib
-import requests
-import io
 
-PARQUET_URL = "https://dados-vacinacao-infantil-ep.s3.us-east-2.amazonaws.com/immunization_master_data.parquet"
-PARQUET_PATH = pathlib.Path("immunization-master-data.parquet")   # salva no dir do app
-MIN_BYTES = 1_000_000                                             # ~1 MB para validar
+PARQUET_PATH = pathlib.Path("immunization-master-data.parquet")
 
-@st.cache_data(show_spinner="Carregando dados…", ttl=86400)
-def load_df() -> pd.DataFrame:
-    # 1) já existe em disco e é inteiro? → usa direto
-    if PARQUET_PATH.exists() and PARQUET_PATH.stat().st_size > MIN_BYTES:
-        return pd.read_parquet(PARQUET_PATH)
-
-    # 2) senão, baixa do S3
-    r = requests.get(PARQUET_URL, timeout=60)
-    print("status =", r.status_code)
-    print("primeiros 200 bytes:", r.content[:200])
-    r.raise_for_status()
-    with open(PARQUET_PATH, "wb") as f:
-        f.write(r.content)
-
-    # 3) lê do disco recém-gravado
-    return pd.read_parquet(PARQUET_PATH)
-
-df = load_df()
+df = pd.read_parquet(PARQUET_PATH)
 
 # Pré-processamento dos Dados
 siglas_estados = ['AC','AL','AM','AP','BA','CE','DF','ES','GO','MA','MG','MS','MT',
