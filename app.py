@@ -108,7 +108,7 @@ if len(df_ano[variavel_idh]) >= 3 and len(df_ano['PC_COVERAGE']) >= 3:
         )
 
     subtitulo = (
-        f"{metodo_correl}: coeficiente = <span style='color:SpringGreen;'>{correlacao:.3f}</span> | p-valor = <span style='color:SpringGreen;'>{p_valor:.3f}</span>"
+        f"{metodo_correl}: coeficiente = <span style='color:tomato;'>{correlacao:.3f}</span> | p-valor = <span style='color:tomato;'>{p_valor:.3f}</span>"
     )
 else:
     subtitulo = "Dados insuficientes para calcular correlação"
