@@ -7,15 +7,26 @@ import streamlit as st
 import requests
 import io
 
-PARQUET_URL = "https://meu-projeto-dados.s3.amazonaws.com/immunization_master_data.parquet"
+PARQUET_URL = "https://dados-vacinacao-infantil-ep.s3.us-east-2.amazonaws.com/immunization-master-data.parquet"
+PARQUET_PATH = pathlib.Path("immunization_master_data.parquet")   # salva no dir do app
+MIN_BYTES = 1_000_000                                             # ~1 MB para validar
 
 @st.cache_data(show_spinner="Carregando dados…", ttl=86400)
 def load_df() -> pd.DataFrame:
-    # baixa em memória (rápido; ~5–10 MB)
-    buf = requests.get(PARQUET_URL, timeout=60).content
-    return pd.read_parquet(io.BytesIO(buf))
+    # 1) já existe em disco e é inteiro? → usa direto
+    if PARQUET_PATH.exists() and PARQUET_PATH.stat().st_size > MIN_BYTES:
+        return pd.read_parquet(PARQUET_PATH)
 
-df = load_df() 
+    # 2) senão, baixa do S3
+    r = requests.get(PARQUET_URL, timeout=60)
+    r.raise_for_status()
+    with open(PARQUET_PATH, "wb") as f:
+        f.write(r.content)
+
+    # 3) lê do disco recém-gravado
+    return pd.read_parquet(PARQUET_PATH)
+
+df = load_df()
 
 # Pré-processamento dos Dados
 siglas_estados = ['AC','AL','AM','AP','BA','CE','DF','ES','GO','MA','MG','MS','MT',
