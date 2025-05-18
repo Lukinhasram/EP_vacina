@@ -8,8 +8,8 @@ import pathlib
 import requests
 import io
 
-PARQUET_URL = "https://dados-vacinacao-infantil-ep.s3.us-east-2.amazonaws.com/immunization-master-data.parquet"
-PARQUET_PATH = pathlib.Path("immunization_master_data.parquet")   # salva no dir do app
+PARQUET_URL = "https://dados-vacinacao-infantil-ep.s3.us-east-2.amazonaws.com/immunization_master_data.parquet"
+PARQUET_PATH = pathlib.Path("immunization-master-data.parquet")   # salva no dir do app
 MIN_BYTES = 1_000_000                                             # ~1 MB para validar
 
 @st.cache_data(show_spinner="Carregando dados…", ttl=86400)
@@ -20,6 +20,8 @@ def load_df() -> pd.DataFrame:
 
     # 2) senão, baixa do S3
     r = requests.get(PARQUET_URL, timeout=60)
+    print("status =", r.status_code)
+    print("primeiros 200 bytes:", r.content[:200])
     r.raise_for_status()
     with open(PARQUET_PATH, "wb") as f:
         f.write(r.content)
