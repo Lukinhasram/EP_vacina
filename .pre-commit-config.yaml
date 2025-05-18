@@ -1,9 +1,0 @@
-repos:
-  - repo: local
-    hooks:
-      - id: download-big-data
-        name: Baixa CSV do S3
-        entry: python scripts/get_data.py
-        language: python
-        always_run: true        # roda em todo 'git pull' (post-merge)
-        stages: [post-merge, post-checkout]

@@ -1,18 +1,23 @@
-# save this as app.py
+# Importação de bibliotecas necessárias
 import pandas as pd
 import numpy as np
 import plotly.express as px
-from scipy.stats import t
+from scipy.stats import t, spearmanr
 import streamlit as st
 import pathlib
 
+# Caminho para o arquivo de dados no formato Parquet
 PARQUET_PATH = pathlib.Path("immunization-master-data.parquet")
 
+# Carregamento dos dados
 df = pd.read_parquet(PARQUET_PATH)
 
 # Pré-processamento dos Dados
+# Lista de siglas dos estados brasileiros
 siglas_estados = ['AC','AL','AM','AP','BA','CE','DF','ES','GO','MA','MG','MS','MT',
                   'PA','PB','PE','PI','PR','RJ','RN','RO','RR','RS','SC','SE','SP','TO']
+
+# Mapeamento de estados para suas respectivas regiões
 estado_para_regiao = {
     'AC': 'Norte', 'AP': 'Norte', 'AM': 'Norte', 'PA': 'Norte', 'RO': 'Norte', 'RR': 'Norte', 'TO': 'Norte',
     'AL': 'Nordeste', 'BA': 'Nordeste', 'CE': 'Nordeste', 'MA': 'Nordeste', 'PB': 'Nordeste',
@@ -21,67 +26,96 @@ estado_para_regiao = {
     'ES': 'Sudeste', 'MG': 'Sudeste', 'RJ': 'Sudeste', 'SP': 'Sudeste',
     'PR': 'Sul', 'RS': 'Sul', 'SC': 'Sul'
 }
+
+# Filtragem dos dados para incluir apenas estados válidos
 df = df[df['LOCAL_NAME'].isin(siglas_estados)].copy()
+
+# Adiciona a coluna de região com base no mapeamento
 df['Região'] = df['LOCAL_NAME'].map(estado_para_regiao)
 
+# Lista de vacinas básicas consideradas no estudo
 vacinas_basicas = [
     'FL_U1_BCG', 'FL_U1_POLIO', 'FL_U1_DTP', 'FL_U1_HepB',
     'FL_U1_Hib', 'FL_Y1_DTP', 'FL_Y1_POLIO', 'FL_Y1_MMR1'
 ]
 
+# Filtragem dos dados para incluir apenas indicadores de vacinas básicas e valores não nulos
 df = df[
     (df['INDICATOR'].isin(vacinas_basicas)) &
     (df['PC_COVERAGE'].notna())
 ]
 
+# Agrupamento dos dados por estado, região e ano, calculando médias
 df_agrupado = df.groupby(['LOCAL_NAME', 'Região', 'YEAR']).agg({
-    'PC_COVERAGE': 'mean',
-    'MHDI_I': 'mean',
-    'MHDI_E': 'mean'
+    'PC_COVERAGE': 'mean',  # Média da cobertura vacinal
+    'MHDI_I': 'mean',       # Média do IDH renda
+    'MHDI_E': 'mean'        # Média do IDH educação
 }).reset_index()
 
+# Configuração da barra lateral no Streamlit
 st.sidebar.title("Controle")
 ano_selecionado = st.sidebar.slider("Ano", int(df_agrupado['YEAR'].min()), int(df_agrupado['YEAR'].max()), 2021)
 mostrar_regressao = st.sidebar.checkbox("Mostrar linha de regressão", value=True)
 mostrar_rotulos = st.sidebar.checkbox("Mostrar nomes dos estados", value=False)
+metodo_correl = st.sidebar.radio("Método de correlação", ("Pearson", "Spearman"), index=0)
+st.sidebar.caption(
+    "**Spearman** é mais preciso, pois as variáveis não seguem distribuição normal. Como o coeficiente entre um e outro varia pouco, mantivemos o **Pearson** como padrão. A linha de regressão linear só serve para a correlação de Pearson."
+)
 
+# Mapeamento de variáveis de IDH para legendas
 variavel_idh_legenda = {'MHDI_I': 'MHDI_I (renda)', 'MHDI_E': 'MHDI_E (educação)'}
 variavel_idh = st.sidebar.selectbox("Escolher variável de IDH", options=list(variavel_idh_legenda.keys()), index=0)
 
-
-
+# Filtragem dos dados para o ano selecionado
 df_ano = df_agrupado[df_agrupado['YEAR'] == ano_selecionado]
 
+# Identificação dos estados com maior e menor cobertura vacinal
 melhores_estados = df_ano.nlargest(3, 'PC_COVERAGE')[['LOCAL_NAME', 'PC_COVERAGE']]
 piores_estados = df_ano.nsmallest(3, 'PC_COVERAGE')[['LOCAL_NAME', 'PC_COVERAGE']]
 
+# Exibição dos estados com maior e menor cobertura na barra lateral
 st.sidebar.markdown("#### Estados com maior cobertura")
 st.sidebar.dataframe(melhores_estados.rename(columns={'LOCAL_NAME': 'Estado', 'PC_COVERAGE': 'Cobertura'}), hide_index=True)
 
 st.sidebar.markdown("#### Estados com menor cobertura")
 st.sidebar.dataframe(piores_estados.rename(columns={'LOCAL_NAME': 'Estado', 'PC_COVERAGE': 'Cobertura'}), hide_index=True)
 
-st.sidebar.markdown(":small[Coberturas maiores que 100% são comuns quando a população-alvo está subestimada ou crianças de outros estados se vacinam ali.]")
+st.sidebar.caption(
+    ":small[Coberturas maiores que 100% são comuns quando a população-alvo está subestimada ou crianças de outros estados se vacinam ali.]"
+)
 
+
+# Cálculo do coeficiente de correlação e p-valor, usando os códigos dos scripts providos
+
+# Verifica se há dados suficientes para calcular a correlação (mínimo de 3 pontos)
 if len(df_ano[variavel_idh]) >= 3 and len(df_ano['PC_COVERAGE']) >= 3:
-    correlacao_matrix = np.corrcoef(df_ano[variavel_idh], df_ano['PC_COVERAGE'])
-    correlacao = correlacao_matrix[0, 1]
-    n = len(df_ano)
-    if correlacao**2 < 1:
-        t_obs = correlacao * np.sqrt((n - 2) / (1 - correlacao**2))
-        p_valor = 2 * (1 - t.cdf(np.abs(t_obs), df=n - 2))
-        subtitulo = f"Coeficiente de correlação: {correlacao:.3f} | P-valor: {p_valor:.3f}"
-    elif correlacao == 1 or correlacao == -1:
-        p_valor = 0.0
-        subtitulo = f"Coeficiente de correlação: {correlacao:.3f} | P-valor: {p_valor:.3f} (Correlação Perfeita)"
-    else:
-        p_valor = np.nan
-        subtitulo = f"Coeficiente de correlação: {correlacao:.3f} | P-valor: N/A"
-else:
-    correlacao = np.nan
-    p_valor = np.nan
-    subtitulo = "Dados insuficientes para calcular correlação (mínimo 3 pontos)"
 
+    if metodo_correl == "Pearson":
+        # Pearson: como era antes
+        correlacao = np.corrcoef(df_ano[variavel_idh], df_ano['PC_COVERAGE'])[0, 1]
+        n = len(df_ano)
+        if correlacao**2 < 1:
+            t_obs = correlacao * np.sqrt((n - 2) / (1 - correlacao**2))
+            p_valor = 2 * (1 - t.cdf(abs(t_obs), df=n - 2))
+        else:
+            p_valor = 0.0
+
+    else:                              # Spearman
+        correlacao, p_valor = spearmanr(
+            df_ano[variavel_idh],
+            df_ano['PC_COVERAGE'],
+            nan_policy="omit"
+        )
+
+    subtitulo = (
+        f"{metodo_correl}: coeficiente = <span style='color:SpringGreen;'>{correlacao:.3f}</span> | p-valor = <span style='color:SpringGreen;'>{p_valor:.3f}</span>"
+    )
+else:
+    subtitulo = "Dados insuficientes para calcular correlação"
+
+
+
+# Criação do gráfico de dispersão
 fig = px.scatter(
     df_ano,
     x=variavel_idh,
@@ -97,19 +131,53 @@ fig = px.scatter(
     height=600
 )
 
+# Configuração de rótulos no gráfico
 if mostrar_rotulos:
     fig.update_traces(textposition='top center')
 
-if mostrar_regressao and not df_ano.empty and len(df_ano[variavel_idh]) >= 2:
+# Adição de linha de regressão, se habilitada
+if mostrar_regressao and not df_ano.empty and len(df_ano[variavel_idh]) >= 2 and metodo_correl == "Pearson":
     coeficientes = np.polyfit(df_ano[variavel_idh], df_ano['PC_COVERAGE'], 1)
     valores_x = np.linspace(df_ano[variavel_idh].min(), df_ano[variavel_idh].max(), 100)
     valores_y = coeficientes[0] * valores_x + coeficientes[1]
     fig.add_scatter(x=valores_x, y=valores_y, mode='lines', name='Regressão Linear')
 
+# Exibição do gráfico no Streamlit
 st.plotly_chart(fig, use_container_width=True)
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Adição de texto explicativo e análise no Streamlit
 st.markdown("<h3 style='font-size: 20px;'>Variações Regionais na Cobertura De Vacinação Infantil</h3><br>"
 "<p style='font-size: 18px;'>Disparidades geográficas significativas na cobertura de vacinação infantil existem em todo o Brasil, com taxas mais baixas frequentemente observadas nas regiões Norte e Nordeste em comparação com o Sul e Sudeste. Essas disparidades regionais frequentemente se correlacionam com variações no desenvolvimento socioeconômico e no acesso à infraestrutura de saúde. Essas disparidades regionais persistentes provavelmente contribuem para a relação não linear, pois áreas com MHDI_I (renda) mais baixo podem consistentemente exibir menor cobertura vacinal devido a barreiras sistêmicas. A distribuição desigual de recursos, infraestrutura e profissionais de saúde em todo o Brasil significa que, mesmo com melhorias no MHDI em nível nacional, certas regiões podem continuar a ficar para trás na cobertura vacinal, levando a uma relação geral complexa.</p>"
 "<h3 style='font-size: 20px;'>Correlação entre MHDI (IDH Municipal), Status Socioeconômico e Vacinação</h3><br>"
