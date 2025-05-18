@@ -4,39 +4,18 @@ import numpy as np
 import plotly.express as px
 from scipy.stats import t
 import streamlit as st
-import pathlib, requests
-import time
+import requests
+import io
 
-DATA_URL = "https://dados-vacinacao-infantil-ep.s3.us-east-2.amazonaws.com/immunization_master_data.csv"
-CSV_PATH = pathlib.Path("immunization_master_data.csv")
+PARQUET_URL = "https://meu-projeto-dados.s3.amazonaws.com/immunization_master_data.parquet"
 
-@st.cache_data(show_spinner="Baixando dataset…")
-def get_dataset_path() -> str:
-    """Baixa o CSV se necessário e devolve o caminho local."""
-    if CSV_PATH.exists() and CSV_PATH.stat().st_size > 1_000_000:
-        return str(CSV_PATH)          # já existe e é grande o bastante
+@st.cache_data(show_spinner="Carregando dados…", ttl=86400)
+def load_df() -> pd.DataFrame:
+    # baixa em memória (rápido; ~5–10 MB)
+    buf = requests.get(PARQUET_URL, timeout=60).content
+    return pd.read_parquet(io.BytesIO(buf))
 
-    for attempt in range(3):
-        try:
-            r = requests.get(DATA_URL, stream=True, timeout=60)
-            if r.status_code != 200:
-                raise RuntimeError(f"status {r.status_code}")
-            with open(CSV_PATH, "wb") as f:
-                for chunk in r.iter_content(1 << 20):   # 1 MiB
-                    f.write(chunk)
-            if CSV_PATH.stat().st_size < 1_000_000:
-                raise RuntimeError("download incompleto (tamanho <1 MiB)")
-            return str(CSV_PATH)
-        except Exception as e:
-            if attempt == 2:
-                st.error(f"Erro ao baixar CSV: {e}")
-                raise
-            time.sleep(5)   # tenta de novo
-    raise RuntimeError("Falha no download após 3 tentativas")
-
-# use o caminho retornado
-csv_path = get_dataset_path()
-df = pd.read_csv(csv_path)
+df = load_df() 
 
 # Pré-processamento dos Dados
 siglas_estados = ['AC','AL','AM','AP','BA','CE','DF','ES','GO','MA','MG','MS','MT',
