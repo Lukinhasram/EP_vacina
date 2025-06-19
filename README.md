@@ -13,10 +13,10 @@ This project is an interactive web application that analyzes the correlation bet
 
 The application is built with **Streamlit** and uses **Pandas** for data manipulation and **Plotly Express** for creating interactive visualizations.
 
-## 🖼️ Application Preview
+## 🖼️ Application Screenshot
 
 <p align="center">
-  <img src="screenshot.png" alt="Application Screenshot" width="800"/>
+  <img src="images/screenshot.png" alt="Application Screenshot" width="800"/>
 </p>
 
 ---
