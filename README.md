@@ -16,7 +16,7 @@ The application is built with **Streamlit** and uses **Pandas** for data manipul
 ## 🖼️ Application Preview
 
 <p align="center">
-  <img src="screenshot.png" alt="Application Screenshot" width="800"/>
+  <img src="images/screenshot.png" alt="Application Screenshot" width="800"/>
 </p>
 
 ---
